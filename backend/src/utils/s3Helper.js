@@ -105,6 +105,7 @@ async function getSignedDownloadUrl(userId, fileName, versionId = null) {
     Bucket: PRIMARY_BUCKET,
     Key: key,
     Expires: 300, // 5 minutes
+    ResponseContentDisposition: `attachment; filename="${fileName}"`,
   };
 
   if (versionId) {
