@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Backend API Service (Node.js + Express)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cloudvault-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - FRONTEND_URL=http://localhost:3000
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - S3_PRIMARY_BUCKET=${S3_PRIMARY_BUCKET:-cloudvault-primary}
+      - S3_REPLICA_BUCKET=${S3_REPLICA_BUCKET:-cloudvault-replica}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:-us-east-1_ADl2lGd8G}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID:-2ij1g9s9tvkrhbpqqo2otm5dep}
+      - DYNAMODB_TABLE=${DYNAMODB_TABLE:-FileMetadata}
+      # Pass AWS credentials from host environment if testing locally
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Frontend Client (React SPA served by Nginx)
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:5000}
+        - REACT_APP_AWS_REGION=${AWS_REGION:-us-east-1}
+        - REACT_APP_USER_POOL_ID=${COGNITO_USER_POOL_ID:-us-east-1_ADl2lGd8G}
+        - REACT_APP_USER_POOL_CLIENT_ID=${COGNITO_CLIENT_ID:-2ij1g9s9tvkrhbpqqo2otm5dep}
+    container_name: cloudvault-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  default:
+    name: cloudvault-network
