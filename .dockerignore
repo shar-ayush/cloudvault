@@ -1,0 +1,8 @@
+**/.git
+**/.gitignore
+**/node_modules
+**/build
+**/*.log
+**/.env
+README.md
+resume_bullet_points.md
